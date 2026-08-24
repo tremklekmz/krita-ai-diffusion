@@ -942,9 +942,9 @@ class StylePresets(SettingsTab):
                 self._arch_select.value = self.current_style.architecture
         self._clip_skip_check.setEnabled(arch.supports_clip_skip)
         self._clip_skip.enabled = arch.supports_clip_skip and self.current_style.clip_skip > 0
-        self._zsnr.enabled = arch.supports_attention_guidance
-        self._sag.enabled = arch.supports_attention_guidance
-        self._negpip.enabled = arch is Arch.anima
+        if Styles.list().is_builtin(self.current_style):
+            for widget in self._checkpoint_advanced_widgets:
+                widget.setEnabled(False)
 
     def _read_style(self, style: Style):
         with self._write_guard:

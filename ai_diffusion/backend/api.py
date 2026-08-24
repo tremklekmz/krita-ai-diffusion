@@ -64,6 +64,7 @@ class CheckpointInput:
     v_prediction_zsnr: bool = False
     rescale_cfg: float = 0.7
     self_attention_guidance: bool = False
+    negpip: bool = False
     dynamic_caching: bool = False
     tiled_vae: bool = False
 

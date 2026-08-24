@@ -198,6 +198,8 @@ def load_checkpoint_with_lora(w: ComfyWorkflow, checkpoint: CheckpointInput, mod
 
     if arch.supports_attention_guidance and checkpoint.self_attention_guidance:
         model = w.apply_self_attention_guidance(model)
+    if arch is Arch.anima and checkpoint.negpip:
+        model, clip = w.clip_negpip(model, clip)
 
     return model, Clip(clip, arch), vae
 

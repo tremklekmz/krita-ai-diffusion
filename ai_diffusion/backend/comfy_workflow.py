@@ -607,6 +607,9 @@ class ComfyWorkflow:
     def clip_text_encode(self, clip: Output, text: str | Output):
         return self.add("CLIPTextEncode", 1, clip=clip, text=text)
 
+    def clip_negpip(self, model: Output, clip: Output):
+        return self.add("CLIPNegPip", 2, model=model, clip=clip)
+
     def conditioning_area(self, conditioning: Output, area: Bounds, strength=1.0):
         return self.add(
             "ConditioningSetArea",

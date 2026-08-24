@@ -8,6 +8,7 @@ import pytest
 
 from ai_diffusion.backend import workflow
 from ai_diffusion.backend.api import (
+    CheckpointInput,
     ConditioningInput,
     ControlInput,
     CustomWorkflowInput,
@@ -231,6 +232,12 @@ def test_inpaint_params():
     assert g.fill is FillMode.blur and g.use_inpaint_model
 
 
+def _anima_models():
+    models = ClientModels()
+    models.checkpoints = {"anima.safetensors": CheckpointInfo("anima.safetensors", Arch.anima)}
+    return models
+
+
 def test_anima_lllite_control_workflow():
     w = ComfyWorkflow()
     models = ClientModels()
@@ -261,6 +268,39 @@ def test_anima_lllite_control_workflow():
     assert w.root[str(model.node - 1)]["inputs"]["weights"] == "anima-lllite-anytest.safetensors"
     assert any(n["class_type"] == "ETN_control_load" for n in w.root.values())
     assert not any(n["class_type"] == "ControlNetLoader" for n in w.root.values())
+
+
+def test_anima_negpip_workflow():
+    w = ComfyWorkflow()
+    checkpoint = CheckpointInput("anima.safetensors", version=Arch.anima, negpip=True)
+    model, clip, vae = workflow.load_checkpoint_with_lora(w, checkpoint, _anima_models())
+
+    nodes = list(w.find("CLIPNegPip"))
+    assert len(nodes) == 1
+    node = nodes[0]
+    loader = w.node(node.id - 1)
+    assert loader.type == "CheckpointLoaderSimple"
+    assert node.inputs["model"] == loader.output(0)
+    assert node.inputs["clip"] == loader.output(1)
+    assert model == node.output(0)
+    assert clip.model == node.output(1)
+    assert vae is not None
+
+
+def test_anima_negpip_disabled_by_default():
+    w = ComfyWorkflow()
+    checkpoint = CheckpointInput("anima.safetensors", version=Arch.anima)
+    workflow.load_checkpoint_with_lora(w, checkpoint, _anima_models())
+    assert not any(n["class_type"] == "CLIPNegPip" for n in w.root.values())
+
+
+def test_negpip_ignored_for_non_anima():
+    models = ClientModels()
+    models.checkpoints = {"sd15.safetensors": CheckpointInfo("sd15.safetensors", Arch.sd15)}
+    w = ComfyWorkflow()
+    checkpoint = CheckpointInput("sd15.safetensors", version=Arch.sd15, negpip=True)
+    workflow.load_checkpoint_with_lora(w, checkpoint, models)
+    assert not any(n["class_type"] == "CLIPNegPip" for n in w.root.values())
 
 
 def test_prepare_lora():

@@ -44,6 +44,12 @@ def test_same_name_same_model():
                 assert all(mf.url == of.url for mf, of in zip(m.files, o.files))
 
 
+def test_negpip_custom_node_registered():
+    assert any(
+        n.name == "ComfyUI-ppm" and "CLIPNegPip" in n.nodes for n in res.required_custom_nodes
+    )
+
+
 def test_resource_ids_exist():
     ids = chain(res.required_resource_ids, res.recommended_resource_ids)
     for resource_id in ids:

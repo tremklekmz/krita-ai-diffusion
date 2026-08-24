@@ -484,6 +484,7 @@ def enumerate_features(user_data: dict):
 def apply_limits(work: WorkflowInput, features: ClientFeatures):
     if work.models:
         work.models.self_attention_guidance = False
+        work.models.negpip = False
     if work.conditioning:
         work.conditioning.control = work.conditioning.control[: features.max_control_layers]
         for region in work.conditioning.regions:

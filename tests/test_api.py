@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 
 from ai_diffusion.backend.api import (
+    CheckpointInput,
     ConditioningInput,
     ControlInput,
     ExtentInput,
@@ -11,9 +12,18 @@ from ai_diffusion.backend.api import (
     WorkflowInput,
     WorkflowKind,
 )
-from ai_diffusion.backend.resources import ControlMode
+from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.image import Bounds, Extent, Image, ImageFileFormat
 from ai_diffusion.util import ensure
+
+
+def test_negpip_serialize():
+    input = WorkflowInput(WorkflowKind.generate)
+    input.models = CheckpointInput("CP", version=Arch.anima, negpip=True)
+    data = input.to_dict()
+    assert data["models"]["negpip"] is True
+    result = WorkflowInput.from_dict(data)
+    assert result.models is not None and result.models.negpip is True
 
 
 def test_defaults():

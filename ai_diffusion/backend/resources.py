@@ -58,6 +58,13 @@ required_custom_nodes = [
             "INPAINT_ColorMatch",
         ],
     ),
+    CustomNode(
+        "ComfyUI-ppm",
+        "ComfyUI-ppm",
+        "https://github.com/pamparamm/ComfyUI-ppm",
+        "6c6c360155cace9d7091306c1b8e26d9c7438620",
+        ["CLIPNegPip"],
+    ),
 ]
 
 optional_custom_nodes = [

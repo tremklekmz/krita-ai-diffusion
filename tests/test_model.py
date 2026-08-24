@@ -13,8 +13,10 @@ from krita import Document as MockKritaDocument
 from krita import Krita, Selection
 from PyQt6.QtCore import QByteArray, Qt
 
+from ai_diffusion.backend import workflow
 from ai_diffusion.backend.api import WorkflowInput, WorkflowKind
 from ai_diffusion.backend.client import CheckpointInfo, ClientEvent, ClientMessage
+from ai_diffusion.backend.comfy_workflow import ComfyWorkflow
 from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.document import KritaDocument
 from ai_diffusion.image import BlendMode, Bounds, Extent, Image, ImageCollection
@@ -22,7 +24,7 @@ from ai_diffusion.layer import Layer, LayerType
 from ai_diffusion.model.connection import Connection, ConnectionState
 from ai_diffusion.model.custom_workflow import WorkflowCollection
 from ai_diffusion.model.jobs import Job, JobKind, JobParams, JobRegion, JobState
-from ai_diffusion.model.model import DocumentModel, ErrorKind, ProgressKind, no_error
+from ai_diffusion.model.model import DocumentModel, ErrorKind, ProgressKind, Workspace, no_error
 from ai_diffusion.settings import ApplyBehavior, ApplyRegionBehavior
 from ai_diffusion.style import Style
 
@@ -742,3 +744,40 @@ async def test_apply_region_group(workflows_dir: Path):
         assert isinstance(r2_right, tuple) and r2_right[3] == 0, (
             "result2: right side must be transparent"
         )
+
+
+@qtapp
+async def test_custom_workflow_anima_negpip(workflows_dir: Path):
+    """Anima style with NegPip enabled must resolve the architecture for custom workflows
+    using ETN_KritaStyleAndPrompt and emit the CLIPNegPip node."""
+    krita_doc = Krita.instance().openDocument("test")
+    async with _model_env(krita_doc, workflows_dir) as (model, client):
+        client.models.checkpoints["test_anima.safetensors"] = CheckpointInfo(
+            "test_anima.safetensors", Arch.anima
+        )
+        style = Style(Path("anima-test.json"))
+        style.checkpoints = ["test_anima.safetensors"]
+        style.negpip = True
+        model.style = style
+
+        graph = ComfyWorkflow.from_dict({
+            "1": {
+                "class_type": "ETN_KritaStyleAndPrompt",
+                "inputs": {"name": "style", "sampler_preset": "auto"},
+            }
+        })
+        model.custom._graph = graph
+        model.custom._metadata = []
+        model.workspace = Workspace.custom
+
+        model.custom.generate()
+        work = (await _wait_for_enqueue(client))[0]
+
+        assert work.kind is WorkflowKind.custom
+        assert work.custom_workflow is not None
+        assert work.custom_workflow.models is not None
+        assert work.custom_workflow.models.version is Arch.anima
+        assert work.custom_workflow.models.negpip is True
+
+        flow = workflow.create(work, client.models)
+        assert any(n["class_type"] == "CLIPNegPip" for n in flow.root.values())

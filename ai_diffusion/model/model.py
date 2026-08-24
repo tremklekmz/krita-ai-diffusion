@@ -553,11 +553,12 @@ class DocumentModel(QObject, ObservableProperties):
             if style_node is not None:
                 style = self.style
                 is_live = style_node.input("sampler_preset", "auto") == "live"
+                arch = resolve_arch(style, client)
                 custom_input.models = style.get_models(client.models.checkpoints)
+                custom_input.models.version = arch
                 custom_input.sampling = workflow.sampling_from_style(style, 1.0, is_live)
 
                 cond = ConditioningInput(self.regions.positive, self.regions.negative)
-                arch = resolve_arch(style, client)
                 prepared = workflow.prepare_prompts(cond, style, seed, arch)
                 custom_input.positive_evaluated = prepared.metadata["prompt_final"]
                 custom_input.negative_evaluated = prepared.metadata["negative_prompt_final"]
